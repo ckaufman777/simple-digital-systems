@@ -22,9 +22,8 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Name and email are required' }) };
   }
 
-  // API key comes from Netlify environment variable — never hardcoded
   const API_KEY = process.env.SYSTEME_API_KEY;
-  const TAG     = 'blueprint-lead';
+  const TAG_NAME = 'blueprint-lead';
 
   const headers = {
     'Content-Type': 'application/json',
@@ -47,17 +46,40 @@ exports.handler = async (event) => {
 
     const contact = await contactRes.json();
     const contactId = contact.id;
+    console.log('Contact created with ID:', contactId);
 
-    // Step 2 — Apply blueprint-lead tag
-    const tagRes = await fetch(`https://api.systeme.io/api/contacts/${contactId}/tags`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ name: TAG })
+    // Step 2 — Look up the tag ID by name
+    const tagsListRes = await fetch('https://api.systeme.io/api/tags?limit=100', {
+      method: 'GET',
+      headers
     });
 
-    if (!tagRes.ok) {
-      console.error('Tag application failed');
-      // Contact was created — not a fatal error, log and continue
+    let tagId = null;
+    if (tagsListRes.ok) {
+      const tagsList = await tagsListRes.json();
+      console.log('Tags found:', JSON.stringify(tagsList));
+      const matched = (tagsList.items || []).find(t => t.name === TAG_NAME);
+      if (matched) tagId = matched.id;
+    } else {
+      console.error('Failed to fetch tags list, status:', tagsListRes.status);
+    }
+
+    if (!tagId) {
+      console.error('Tag not found with name:', TAG_NAME);
+    } else {
+      // Step 3 — Assign tag to contact by ID
+      const tagRes = await fetch(`https://api.systeme.io/api/contacts/${contactId}/tags`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ tagId })
+      });
+
+      if (!tagRes.ok) {
+        const tagErr = await tagRes.json();
+        console.error('Tag assignment failed:', JSON.stringify(tagErr));
+      } else {
+        console.log('Tag assigned successfully');
+      }
     }
 
     return {
