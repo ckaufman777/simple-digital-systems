@@ -529,11 +529,8 @@
 
       if (!res.ok) throw new Error(data.error || 'Submission failed');
 
-      // Success
-      msgEl.style.color = '#3aaa6e';
-      msgEl.textContent = '✅ Check your inbox — blueprint is on its way!';
-      document.getElementById(formId + '-first-name').value = '';
-      document.getElementById(formId + '-email').value = '';
+      // Success — redirect to bridge/thank you page
+      window.location.href = 'https://simpledigitalsystems.systeme.io/48344092-bc7e3165';
 
     } catch (err) {
       console.error(err);
